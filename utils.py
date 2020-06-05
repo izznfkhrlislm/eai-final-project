@@ -3,7 +3,43 @@ import json
 from bs4 import BeautifulSoup
 from http import HTTPStatus
 from requests.exceptions import ConnectTimeout
+from pika import ConnectionParameters, PlainCredentials, BlockingConnection
 
+
+class Covid19MQUtils:
+    MQ_EXCHANGE_TYPE = "direct"
+    MQ_EXCHANGE_NAME = '1606875806'
+    MQ_HOST = "152.118.148.95"
+    MQ_PORT = 5672
+    MQ_USERNAME = "0806444524"
+    MQ_PASSWORD = "0806444524"
+    MQ_VIRTUAL_HOST = "/0806444524"
+
+    def __init__(self, routing_key, is_in_production):
+        self.routing_key = routing_key
+        self.pika_connection = BlockingConnection(
+            ConnectionParameters(
+                host=self.MQ_HOST,
+                virtual_host=self.MQ_VIRTUAL_HOST,
+                port=self.MQ_PORT,
+                credentials=PlainCredentials(self.MQ_USERNAME, self.MQ_PASSWORD)
+            )
+        )
+        self.connection_channel = self.pika_connection.channel()
+        self.connection_channel.exchange_declare(
+            exchange=self.MQ_EXCHANGE_NAME,
+            exchange_type=self.MQ_EXCHANGE_TYPE
+        )
+    
+    def send_message(self, message):
+        self.connection_channel.basic_publish(
+            exchange=self.MQ_EXCHANGE_NAME,
+            routing_key=self.routing_key,
+            body=message
+        )
+    
+    def close_connection(self):
+        self.pika_connection.close()
 
 class Covid19APIUtils:
     HOST_URL = "https://covid19.mathdro.id/api/"
@@ -17,8 +53,8 @@ class Covid19APIUtils:
         self.requestObject = requests
 
     def get_countries_list_and_codes(self):
+        countries_name_list = []
         try :
-            countries_name_list = []
             countries_response = self.requestObject.get(
                 self.HOST_URL + self.COUNTRIES_LIST_ACTION
             )
@@ -27,14 +63,14 @@ class Covid19APIUtils:
                 for country_data in countries_response.json()["countries"]:
                     country_dict = {
                         "name": country_data["name"],
-                        "code": None if "iso2" not in list(country_data.keys()) else country_data["iso2"]
+                        "code": country_data["name"].lower() if "iso2" not in list(country_data.keys()) else country_data["iso2"]
                     }
                     countries_name_list.append(country_dict)
-
-            return countries_name_list
         
         except ConnectTimeout:
             return HTTPStatus.REQUEST_TIMEOUT
+
+        return countries_name_list
     
     def get_worldwide_stats(self):
         response = {}
@@ -49,33 +85,32 @@ class Covid19APIUtils:
                     "recovered_case": response_object.json()["recovered"]["value"],
                     "deaths_case": response_object.json()["deaths"]["value"]
                 }
-            
-            return response
         
         except ConnectTimeout:
             return HTTPStatus.REQUEST_TIMEOUT
-    
-    def get_stats_per_country(self, country):
-        country_code_request = country + "/"
+
+        return response
+
+    def get_stats_per_country(self, country_code):
         response = {}
         try:
+            country_code_request = country_code + "/"
             response_object = self.requestObject.get(
                 self.HOST_URL + self.COUNTRIES_LIST_ACTION + country_code_request
             )
-
+            
             if response_object.status_code == HTTPStatus.OK:
                 response = {
-                    "country_code": country,
+                    "country_code": country_code,
                     "confirmed_case": response_object.json()["confirmed"]["value"],
                     "recovered_case": response_object.json()["recovered"]["value"],
                     "deaths_case": response_object.json()["deaths"]["value"]
                 }
-            
-            return response
         
         except ConnectTimeout:
             return HTTPStatus.REQUEST_TIMEOUT
 
+        return response
 
 class Covid19WebScrapperDataUtils:
     HOST_URL = "https://worldpopulationreview.com/"
@@ -116,6 +151,7 @@ class Covid19WebScrapperDataUtils:
             
 if __name__ == "__main__":
     covidWrapper = Covid19WebScrapperDataUtils()
+    covidApi = Covid19APIUtils()
+
+    print(covidApi.get_stats_per_country())
     print(covidWrapper.get_total_worldwide_population())
-        
-        

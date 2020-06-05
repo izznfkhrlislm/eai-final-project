@@ -1,0 +1,38 @@
+<DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>EAI Final Project: Covid-19 Statistics Visualization</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+        <script>
+            window.onload = function () {
+                var mqUsername = '{{ mq_username }}';
+                var mqPassword = '{{ mq_password }}';
+                var mqVirtualHost = '{{ mq_virtual_host }}';
+                var wsUrl = '{{ ws_url }}';
+                var subscriptionChannel = '{{ subscription_channel }}';
+
+                var websocket = new SockJS(wsUrl);
+                var stompClient = Stomp.over(websocket);
+
+                function onReceive(message) {
+                    var body = message.body;
+                    message.ack();
+                    console.log(body);
+                }
+
+                function onConnect() {
+                    stompClient.subscribe(subscriptionChannel, onReceive, {'ack':'client'})
+                }
+
+                function onError(error) {
+                    console.log(error);
+                }
+
+                stompClient.connect(mqUsername, mqPassword, onConnect, onError, mqVirtualHost);
+            }
+        </script>
+    </head>
+</html>
