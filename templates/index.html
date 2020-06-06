@@ -1,4 +1,4 @@
-<DOCTYPE html>
+<!DOCTYPE html>
 <html>
     <head>
         <meta charset="utf-8">
@@ -16,11 +16,54 @@
 
                 var websocket = new SockJS(wsUrl);
                 var stompClient = Stomp.over(websocket);
+                var isCompleted = false;
+                let columns = ["country_name", "population", "area", "confirmed_case", "recovered_case", "deaths_case"];
+
+                function generateTableHead(table, data) {
+                    let thead = table.createTHead();
+                    let row = thead.insertRow();
+                    for (let key of data) {
+                        let th = document.createElement("th")
+                        th.style.border = "1px solid black";
+                        let text = document.createTextNode(key);
+                        th.appendChild(text);
+                        row.appendChild(th);
+                    }
+                }
+
+                function generateTable(table, data) {
+                    for (let element of data) {
+                        let row = table.insertRow();
+                        for (key of columns) {
+                            let cell = row.insertCell();
+                            cell.style.border = "1px solid black";
+                            let text = document.createTextNode(element[key]);
+                            cell.appendChild(text);
+                        }
+                    }
+                }
 
                 function onReceive(message) {
                     var body = message.body;
                     message.ack();
-                    console.log(body);
+                    if (isCompleted) {
+                        document.getElementById("fetchProgress").innerText = "Fetch Data Completed!";
+                        
+                        jsonData = JSON.parse(body);
+                        let table = document.querySelector("table");
+                        
+                        let data = Object.keys(jsonData[0]);
+                        
+                        generateTableHead(table, columns);
+                        generateTable(table, jsonData);
+                        
+                        stompClient.disconnect();
+                    } else {
+                        document.getElementById("fetchProgress").innerText = body;
+                    }
+                    if (body.indexOf('100%') !== -1) {
+                        isCompleted = true;
+                    } 
                 }
 
                 function onConnect() {
@@ -35,4 +78,9 @@
             }
         </script>
     </head>
+    <body>
+        <h1>Covid-19 Stats</h1>
+        <h5 id="fetchProgress">Retrieving Data: 0%</h5>
+        <table style="border: 1px solid black; border-collapse: collapse;"></table>
+    </body>
 </html>

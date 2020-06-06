@@ -15,7 +15,7 @@ class Covid19MQUtils:
     MQ_PASSWORD = "0806444524"
     MQ_VIRTUAL_HOST = "/0806444524"
 
-    def __init__(self, routing_key, is_in_production):
+    def __init__(self, routing_key, is_in_production=False):
         self.routing_key = routing_key
         self.pika_connection = BlockingConnection(
             ConnectionParameters(
@@ -63,7 +63,7 @@ class Covid19APIUtils:
                 for country_data in countries_response.json()["countries"]:
                     country_dict = {
                         "name": country_data["name"],
-                        "code": country_data["name"].lower() if "iso2" not in list(country_data.keys()) else country_data["iso2"]
+                        "code": country_data["name"].lower()
                     }
                     countries_name_list.append(country_dict)
         
@@ -102,9 +102,19 @@ class Covid19APIUtils:
             if response_object.status_code == HTTPStatus.OK:
                 response = {
                     "country_code": country_code,
-                    "confirmed_case": response_object.json()["confirmed"]["value"],
-                    "recovered_case": response_object.json()["recovered"]["value"],
-                    "deaths_case": response_object.json()["deaths"]["value"]
+                    "confirmed_case": response_object.json()["confirmed"]["value"] \
+                        if response_object.json()["confirmed"]["value"] is not None or not 0 else "N/A",
+                    "recovered_case": response_object.json()["recovered"]["value"] \
+                        if response_object.json()["recovered"]["value"] is not None or not 0 else "N/A",
+                    "deaths_case": response_object.json()["deaths"]["value"] \
+                        if response_object.json()["deaths"]["value"] is not None or not 0 else "N/A"
+                }
+            else:
+                response = {
+                    "country_code": country_code,
+                    "confirmed_case": "N/A",
+                    "recovered_case": "N/A",
+                    "deaths_case": "N/A",
                 }
         
         except ConnectTimeout:
@@ -120,7 +130,7 @@ class Covid19WebScrapperDataUtils:
         self.scrapper = BeautifulSoup(self.website_request.content, 'html.parser')
     
     def get_worldwide_population_data_with_countries(self):
-        worldwide_population_data = []
+        worldwide_population_data = {}
         worldwide_population_table = self.scrapper.find(
             'table', 
             class_='datatableStyles__StyledTable-bwtkle-1 cyosFW table table-striped'
@@ -132,12 +142,12 @@ class Covid19WebScrapperDataUtils:
                 current_population = row_content.find_all('td')[2].get_text()
                 country_area = row_content.find_all('td')[4].get_text()
                 
-                worldwide_population_data.append({
+                worldwide_population_data[country_name] = {
                     "country": country_name,
                     "population": current_population,
-                    "area": country_area
-                })
-        
+                    "area": country_area,
+                }
+
         return worldwide_population_data
     
     def get_total_worldwide_population(self):
@@ -151,7 +161,4 @@ class Covid19WebScrapperDataUtils:
             
 if __name__ == "__main__":
     covidWrapper = Covid19WebScrapperDataUtils()
-    covidApi = Covid19APIUtils()
-
-    print(covidApi.get_stats_per_country())
-    print(covidWrapper.get_total_worldwide_population())
+    print(covidWrapper.get_worldwide_population_data_with_countries())
