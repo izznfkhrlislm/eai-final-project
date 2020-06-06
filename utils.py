@@ -52,6 +52,30 @@ class Covid19APIUtils:
     def __init__(self):
         self.requestObject = requests
 
+    def clean_names(self, name):
+        if name == "US":
+            return "United States"
+        elif name == "Taiwan*":
+            return "Taiwan"
+        elif name == "Korea, South":
+            return "South Korea"
+        elif name == "Cote d'Ivoire":
+            return "Ivory Coast"
+        elif name == "North Macedonia":
+            return "Macedonia"
+        elif name == "Congo (Brazzaville)":
+            return "DR Congo"
+        elif name == "Congo (Kinshasa)":
+            return "Republic of the Congo"
+        elif name == "Burma":
+            return "Myanmar"
+        elif name == "Cabo Verde":
+            return "Cape Verde"
+        elif name == "West Bank and Gaza":
+            return "Palestine"
+        else:
+            return name
+
     def get_countries_list_and_codes(self):
         countries_name_list = []
         try :
@@ -62,8 +86,9 @@ class Covid19APIUtils:
             if countries_response.status_code == HTTPStatus.OK:
                 for country_data in countries_response.json()["countries"]:
                     country_dict = {
-                        "name": country_data["name"],
-                        "code": country_data["name"].lower()
+                        "name": self.clean_names(country_data["name"]),
+                        "code": country_data["iso3"] if self.clean_names(country_data["name"]) != country_data["name"]\
+                            and "iso3" in list(country_data.keys()) else country_data["name"],
                     }
                     countries_name_list.append(country_dict)
         
