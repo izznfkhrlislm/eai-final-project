@@ -17,15 +17,23 @@
                 var websocket = new SockJS(wsUrl);
                 var stompClient = Stomp.over(websocket);
                 var isCompleted = false;
-                let columns = ["country_name", "population", "area", "confirmed_case", "recovered_case", "deaths_case"];
+                let columns = {
+                    "country_name": "Negara", 
+                    "population": "Populasi (2020)", 
+                    "area":"Luas Wilayah", 
+                    "confirmed_case": "Kasus Terkonfirmasi", 
+                    "recovered_case": "Kasus Sembuh", 
+                    "deaths_case": "Kasus Meninggal",
+                    "mortality_rate": "Angka Mortalitas"
+                };
 
                 function generateTableHead(table, data) {
                     let thead = table.createTHead();
                     let row = thead.insertRow();
-                    for (let key of data) {
+                    for (let key of Object.keys(data)) {
                         let th = document.createElement("th")
-                        th.style.border = "1px solid black";
-                        let text = document.createTextNode(key);
+                        th.style.border = "1px solid black"; //change table styling here
+                        let text = document.createTextNode(columns[key]);
                         th.appendChild(text);
                         row.appendChild(th);
                     }
@@ -34,9 +42,9 @@
                 function generateTable(table, data) {
                     for (let element of data) {
                         let row = table.insertRow();
-                        for (key of columns) {
+                        for (key of Object.keys(columns)) {
                             let cell = row.insertCell();
-                            cell.style.border = "1px solid black";
+                            cell.style.border = "1px solid black"; //change table styling here
                             let text = document.createTextNode(element[key]);
                             cell.appendChild(text);
                         }
@@ -52,10 +60,15 @@
                         jsonData = JSON.parse(body);
                         let table = document.querySelector("table");
                         
-                        let data = Object.keys(jsonData[0]);
+                        let data = Object.keys(jsonData[1]);
                         
+                        document.getElementById("worldPopulation").innerText = "Total Populasi Dunia: " + jsonData[0].worldwide_population + " jiwa";
+                        document.getElementById("worldTotalConfirmed").innerText = "Total Kasus Terkonfirmasi: " + jsonData[0].worldwide_confirmed;
+                        document.getElementById("worldTotalRecovered").innerText = "Total Kasus Sembuh: " + jsonData[0].worldwide_recovered;
+                        document.getElementById("worldTotalDeaths").innerText = "Total Kasus Meninggal: " + jsonData[0].worldwide_deaths;
+
                         generateTableHead(table, columns);
-                        generateTable(table, jsonData);
+                        generateTable(table, jsonData.slice(1));
                         
                         stompClient.disconnect();
                     } else {
@@ -79,8 +92,13 @@
         </script>
     </head>
     <body>
+        <!-- set styling here -->
         <h1>Covid-19 Stats</h1>
         <h5 id="fetchProgress">Retrieving Data: 0%</h5>
+        <h4 id="worldPopulation"></h4>
+        <h4 id="worldTotalConfirmed"></h4>
+        <h4 id="worldTotalRecovered"></h4>
+        <h4 id="worldTotalDeaths"></h4>
         <table style="border: 1px solid black; border-collapse: collapse;"></table>
     </body>
 </html>
